@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Generador de Diagramas UML</title>
+  <title>Generador de Diagramas UML Avanzado</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -71,22 +71,40 @@
       padding: 5px;
       font-size: 14px;
     }
+
+    /* SVG encima del canvas para relaciones */
+    #lines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 85vh;
+      pointer-events: none; /* No bloquea clics */
+    }
   </style>
 </head>
 <body>
-  <h1>Generador UML (Drag & Drop)</h1>
+  <h1>Generador UML Avanzado</h1>
 
   <div id="toolbar">
     <button onclick="addClassBox()">➕ Clase</button>
+    <button onclick="startRelation()">🔗 Relación</button>
   </div>
 
-  <div id="canvas"></div>
+  <div id="canvas">
+    <svg id="lines"></svg>
+  </div>
 
   <script>
     let canvas = document.getElementById("canvas");
-    let zIndexCounter = 1; // Para que la última caja clicada esté al frente
+    let svg = document.getElementById("lines");
+    let zIndexCounter = 1;
+    let boxes = [];
+    let relations = [];
+    let relationMode = false;
+    let firstBox = null;
 
-    // Función para crear una caja UML
+    // Crear nueva clase
     function addClassBox() {
       let box = document.createElement("div");
       box.classList.add("class-box");
@@ -98,16 +116,65 @@
         <div class="class-header" contenteditable="true">Clase</div>
         <div class="class-body" contenteditable="true">
           + atributo1<br>
-          + atributo2()<br>
+          + metodo1()<br>
         </div>
       `;
 
       canvas.appendChild(box);
+      boxes.push(box);
 
       makeDraggable(box);
+
+      box.addEventListener("click", () => {
+        if (relationMode) {
+          if (!firstBox) {
+            firstBox = box;
+          } else {
+            if (firstBox !== box) {
+              createRelation(firstBox, box);
+            }
+            firstBox = null;
+            relationMode = false;
+          }
+        }
+      });
     }
 
-    // Función para hacer draggable una caja
+    // Relación entre dos cajas
+    function createRelation(box1, box2) {
+      let line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("stroke", "black");
+      line.setAttribute("stroke-width", "2");
+
+      svg.appendChild(line);
+      relations.push({ line, box1, box2 });
+      updateLines();
+    }
+
+    function startRelation() {
+      relationMode = true;
+      firstBox = null;
+    }
+
+    // Actualizar posiciones de líneas
+    function updateLines() {
+      relations.forEach(rel => {
+        let r1 = rel.box1.getBoundingClientRect();
+        let r2 = rel.box2.getBoundingClientRect();
+        let c1x = r1.left + r1.width/2 + window.scrollX;
+        let c1y = r1.top + r1.height/2 + window.scrollY;
+        let c2x = r2.left + r2.width/2 + window.scrollX;
+        let c2y = r2.top + r2.height/2 + window.scrollY;
+        let canvasRect = canvas.getBoundingClientRect();
+
+        rel.line.setAttribute("x1", c1x - canvasRect.left);
+        rel.line.setAttribute("y1", c1y - canvasRect.top);
+        rel.line.setAttribute("x2", c2x - canvasRect.left);
+        rel.line.setAttribute("y2", c2y - canvasRect.top);
+      });
+    }
+
+    // Drag & Drop
     function makeDraggable(element) {
       let offsetX, offsetY, isDown = false;
 
@@ -128,6 +195,7 @@
         if (!isDown) return;
         element.style.left = e.clientX - offsetX + "px";
         element.style.top = e.clientY - offsetY + "px";
+        updateLines();
       });
     }
   </script>
