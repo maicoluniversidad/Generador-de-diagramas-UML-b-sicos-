@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Generador UML Creativo</title>
+  <title>Generador UML con Notas Creativas</title>
   <style>
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'Segoe UI', sans-serif;
       margin: 0;
       background: linear-gradient(135deg, #fdfbfb, #ebedee);
     }
@@ -60,11 +60,6 @@
       box-shadow: 3px 3px 8px rgba(0,0,0,0.2);
       cursor: grab;
       user-select: none;
-      transition: box-shadow 0.2s;
-    }
-
-    .class-box:hover {
-      box-shadow: 4px 4px 12px rgba(0,0,0,0.3);
     }
 
     .class-header {
@@ -82,29 +77,22 @@
       min-height: 40px;
     }
 
-    /* Menú flotante */
-    .menu {
+    /* Notas */
+    .note {
       position: absolute;
-      top: 4px;
-      right: 4px;
-      display: flex;
-      gap: 4px;
+      width: 140px;
+      min-height: 60px;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: "Comic Sans MS", cursive, sans-serif;
+      color: #333;
+      box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+      cursor: grab;
     }
 
-    .menu button {
-      font-size: 10px;
-      border: none;
-      background: #444;
-      color: white;
-      padding: 2px 4px;
-      cursor: pointer;
-      border-radius: 3px;
-      opacity: 0.8;
-    }
-
-    .menu button:hover {
-      opacity: 1;
-      background: #000;
+    .note[contenteditable="true"]:focus {
+      outline: 2px dashed #000;
     }
 
     /* SVG líneas */
@@ -123,20 +111,18 @@
       marker-end: url(#arrow);
     }
 
-    /* Marcadores de flechas */
     marker {
       fill: #444;
     }
   </style>
 </head>
 <body>
-  <h1>✨ Generador UML Creativo ✨</h1>
+  <h1>📐 Generador UML + Notas Rápidas 📝</h1>
 
   <div id="toolbar">
     <button onclick="addClassBox()">➕ Clase</button>
-    <button onclick="startRelation('asociacion')">🔗 Asociación</button>
-    <button onclick="startRelation('herencia')">⬆️ Herencia</button>
-    <button onclick="startRelation('composicion')">◆ Composición</button>
+    <button onclick="startRelation()">🔗 Relación</button>
+    <button onclick="addNote()">📝 Nota</button>
   </div>
 
   <div id="canvas">
@@ -144,9 +130,6 @@
       <defs>
         <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
           <path d="M0,0 L0,6 L9,3 z" />
-        </marker>
-        <marker id="diamond" markerWidth="12" markerHeight="12" refX="8" refY="6" orient="auto">
-          <path d="M0,6 L6,0 L12,6 L6,12 z" />
         </marker>
       </defs>
     </svg>
@@ -156,13 +139,11 @@
     let canvas = document.getElementById("canvas");
     let svg = document.getElementById("lines");
     let zIndexCounter = 1;
-    let boxes = [];
     let relations = [];
     let relationMode = false;
     let firstBox = null;
-    let relationType = "asociacion";
 
-    // Crear nueva clase UML
+    // Crear una clase UML
     function addClassBox() {
       let box = document.createElement("div");
       box.classList.add("class-box");
@@ -176,16 +157,9 @@
           + atributo1<br>
           + metodo1()<br>
         </div>
-        <div class="menu">
-          <button onclick="duplicateBox(this)">⧉</button>
-          <button onclick="changeColor(this)">🎨</button>
-          <button onclick="deleteBox(this)">❌</button>
-        </div>
       `;
 
       canvas.appendChild(box);
-      boxes.push(box);
-
       makeDraggable(box);
 
       box.addEventListener("click", () => {
@@ -194,7 +168,7 @@
             firstBox = box;
           } else {
             if (firstBox !== box) {
-              createRelation(firstBox, box, relationType);
+              createRelation(firstBox, box);
             }
             firstBox = null;
             relationMode = false;
@@ -203,30 +177,42 @@
       });
     }
 
-    // Relaciones con tipos
-    function createRelation(box1, box2, type) {
+    // Crear una nota
+    function addNote() {
+      let note = document.createElement("div");
+      note.classList.add("note");
+      note.contentEditable = "true";
+      note.style.top = "80px";
+      note.style.left = "80px";
+      note.style.zIndex = zIndexCounter++;
+      note.innerText = "Escribe algo aquí...";
+
+      // Colores divertidos
+      let colors = ["#fffa8b", "#b3ffb3", "#b3e0ff", "#ffb3b3", "#e0b3ff"];
+      note.style.background = colors[Math.floor(Math.random() * colors.length)];
+
+      canvas.appendChild(note);
+      makeDraggable(note);
+    }
+
+    // Crear relación
+    function createRelation(box1, box2) {
       let line = document.createElementNS("http://www.w3.org/2000/svg", "line");
       line.setAttribute("stroke", "#444");
       line.setAttribute("stroke-width", "2");
-
-      if (type === "herencia") {
-        line.setAttribute("marker-end", "url(#arrow)");
-      } else if (type === "composicion") {
-        line.setAttribute("marker-start", "url(#diamond)");
-      }
+      line.setAttribute("marker-end", "url(#arrow)");
 
       svg.appendChild(line);
       relations.push({ line, box1, box2 });
       updateLines();
     }
 
-    function startRelation(type) {
+    function startRelation() {
       relationMode = true;
       firstBox = null;
-      relationType = type;
     }
 
-    // Actualizar posiciones
+    // Actualizar líneas
     function updateLines() {
       relations.forEach(rel => {
         let r1 = rel.box1.getBoundingClientRect();
@@ -244,7 +230,7 @@
       });
     }
 
-    // Drag & Drop con animación suave
+    // Hacer arrastrable
     function makeDraggable(element) {
       let offsetX, offsetY, isDown = false;
 
@@ -267,32 +253,6 @@
         element.style.top = e.clientY - offsetY + "px";
         updateLines();
       });
-    }
-
-    // Funciones menú
-    function deleteBox(btn) {
-      let box = btn.closest(".class-box");
-      canvas.removeChild(box);
-      relations = relations.filter(r => r.box1 !== box && r.box2 !== box);
-      updateLines();
-    }
-
-    function duplicateBox(btn) {
-      let box = btn.closest(".class-box");
-      let clone = box.cloneNode(true);
-      clone.style.top = parseInt(box.style.top) + 30 + "px";
-      clone.style.left = parseInt(box.style.left) + 30 + "px";
-      canvas.appendChild(clone);
-      makeDraggable(clone);
-    }
-
-    function changeColor(btn) {
-      let box = btn.closest(".class-box");
-      let colors = ["#fffbe7", "#e7f7ff", "#e7ffe7", "#f7e7ff"];
-      let current = box.style.background;
-      let index = colors.indexOf(current);
-      let next = colors[(index + 1) % colors.length];
-      box.style.background = next || colors[0];
     }
   </script>
 </body>
