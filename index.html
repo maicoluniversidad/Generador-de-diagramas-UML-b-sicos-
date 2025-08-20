@@ -4,7 +4,74 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Generador de Diagramas UML</title>
-  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f4f4f9;
+    }
+
+    h1 {
+      text-align: center;
+      margin: 10px;
+    }
+
+    #toolbar {
+      background: #222;
+      color: #fff;
+      padding: 10px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    #toolbar button {
+      background: #4caf50;
+      border: none;
+      padding: 8px 12px;
+      color: white;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    #toolbar button:hover {
+      background: #45a049;
+    }
+
+    #canvas {
+      width: 100%;
+      height: 85vh;
+      background: white;
+      border: 2px dashed #ccc;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Caja UML */
+    .class-box {
+      position: absolute;
+      width: 150px;
+      border: 2px solid #333;
+      background: #fafafa;
+      border-radius: 4px;
+      box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+      cursor: grab;
+      user-select: none;
+    }
+
+    .class-header {
+      background: #333;
+      color: white;
+      padding: 5px;
+      font-weight: bold;
+      cursor: grab;
+    }
+
+    .class-body {
+      padding: 5px;
+      font-size: 14px;
+    }
+  </style>
 </head>
 <body>
   <h1>Generador UML (Drag & Drop)</h1>
@@ -15,6 +82,54 @@
 
   <div id="canvas"></div>
 
-  <script src="script.js"></script>
+  <script>
+    let canvas = document.getElementById("canvas");
+    let zIndexCounter = 1; // Para que la última caja clicada esté al frente
+
+    // Función para crear una caja UML
+    function addClassBox() {
+      let box = document.createElement("div");
+      box.classList.add("class-box");
+      box.style.top = "50px";
+      box.style.left = "50px";
+      box.style.zIndex = zIndexCounter++;
+
+      box.innerHTML = `
+        <div class="class-header" contenteditable="true">Clase</div>
+        <div class="class-body" contenteditable="true">
+          + atributo1<br>
+          + atributo2()<br>
+        </div>
+      `;
+
+      canvas.appendChild(box);
+
+      makeDraggable(box);
+    }
+
+    // Función para hacer draggable una caja
+    function makeDraggable(element) {
+      let offsetX, offsetY, isDown = false;
+
+      element.addEventListener("mousedown", (e) => {
+        isDown = true;
+        element.style.zIndex = zIndexCounter++;
+        offsetX = e.clientX - element.offsetLeft;
+        offsetY = e.clientY - element.offsetTop;
+        element.style.cursor = "grabbing";
+      });
+
+      document.addEventListener("mouseup", () => {
+        isDown = false;
+        element.style.cursor = "grab";
+      });
+
+      document.addEventListener("mousemove", (e) => {
+        if (!isDown) return;
+        element.style.left = e.clientX - offsetX + "px";
+        element.style.top = e.clientY - offsetY + "px";
+      });
+    }
+  </script>
 </body>
 </html>
