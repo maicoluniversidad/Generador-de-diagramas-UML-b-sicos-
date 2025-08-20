@@ -3,17 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Generador de Diagramas UML Avanzado</title>
+  <title>Generador UML Creativo</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       margin: 0;
-      background: #f4f4f9;
+      background: linear-gradient(135deg, #fdfbfb, #ebedee);
     }
 
     h1 {
       text-align: center;
       margin: 10px;
+      color: #333;
     }
 
     #toolbar {
@@ -32,67 +33,123 @@
       color: white;
       cursor: pointer;
       border-radius: 5px;
+      transition: 0.2s;
     }
 
     #toolbar button:hover {
       background: #45a049;
+      transform: scale(1.05);
     }
 
     #canvas {
       width: 100%;
       height: 85vh;
-      background: white;
-      border: 2px dashed #ccc;
+      background: #fff;
+      border-top: 3px solid #ccc;
       position: relative;
       overflow: hidden;
     }
 
-    /* Caja UML */
+    /* Cajas UML */
     .class-box {
       position: absolute;
-      width: 150px;
+      width: 160px;
       border: 2px solid #333;
-      background: #fafafa;
-      border-radius: 4px;
-      box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+      background: #fffbe7;
+      border-radius: 6px;
+      box-shadow: 3px 3px 8px rgba(0,0,0,0.2);
       cursor: grab;
       user-select: none;
+      transition: box-shadow 0.2s;
+    }
+
+    .class-box:hover {
+      box-shadow: 4px 4px 12px rgba(0,0,0,0.3);
     }
 
     .class-header {
       background: #333;
       color: white;
-      padding: 5px;
+      padding: 6px;
       font-weight: bold;
       cursor: grab;
+      border-radius: 4px 4px 0 0;
     }
 
     .class-body {
-      padding: 5px;
+      padding: 6px;
       font-size: 14px;
+      min-height: 40px;
     }
 
-    /* SVG encima del canvas para relaciones */
+    /* Menú flotante */
+    .menu {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      display: flex;
+      gap: 4px;
+    }
+
+    .menu button {
+      font-size: 10px;
+      border: none;
+      background: #444;
+      color: white;
+      padding: 2px 4px;
+      cursor: pointer;
+      border-radius: 3px;
+      opacity: 0.8;
+    }
+
+    .menu button:hover {
+      opacity: 1;
+      background: #000;
+    }
+
+    /* SVG líneas */
     #lines {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 85vh;
-      pointer-events: none; /* No bloquea clics */
+      pointer-events: none;
+    }
+
+    line, path {
+      stroke: #444;
+      stroke-width: 2;
+      marker-end: url(#arrow);
+    }
+
+    /* Marcadores de flechas */
+    marker {
+      fill: #444;
     }
   </style>
 </head>
 <body>
-  <h1>Generador UML Avanzado</h1>
+  <h1>✨ Generador UML Creativo ✨</h1>
 
   <div id="toolbar">
     <button onclick="addClassBox()">➕ Clase</button>
-    <button onclick="startRelation()">🔗 Relación</button>
+    <button onclick="startRelation('asociacion')">🔗 Asociación</button>
+    <button onclick="startRelation('herencia')">⬆️ Herencia</button>
+    <button onclick="startRelation('composicion')">◆ Composición</button>
   </div>
 
   <div id="canvas">
-    <svg id="lines"></svg>
+    <svg id="lines">
+      <defs>
+        <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L9,3 z" />
+        </marker>
+        <marker id="diamond" markerWidth="12" markerHeight="12" refX="8" refY="6" orient="auto">
+          <path d="M0,6 L6,0 L12,6 L6,12 z" />
+        </marker>
+      </defs>
+    </svg>
   </div>
 
   <script>
@@ -103,13 +160,14 @@
     let relations = [];
     let relationMode = false;
     let firstBox = null;
+    let relationType = "asociacion";
 
-    // Crear nueva clase
+    // Crear nueva clase UML
     function addClassBox() {
       let box = document.createElement("div");
       box.classList.add("class-box");
-      box.style.top = "50px";
-      box.style.left = "50px";
+      box.style.top = "60px";
+      box.style.left = "60px";
       box.style.zIndex = zIndexCounter++;
 
       box.innerHTML = `
@@ -117,6 +175,11 @@
         <div class="class-body" contenteditable="true">
           + atributo1<br>
           + metodo1()<br>
+        </div>
+        <div class="menu">
+          <button onclick="duplicateBox(this)">⧉</button>
+          <button onclick="changeColor(this)">🎨</button>
+          <button onclick="deleteBox(this)">❌</button>
         </div>
       `;
 
@@ -131,7 +194,7 @@
             firstBox = box;
           } else {
             if (firstBox !== box) {
-              createRelation(firstBox, box);
+              createRelation(firstBox, box, relationType);
             }
             firstBox = null;
             relationMode = false;
@@ -140,23 +203,30 @@
       });
     }
 
-    // Relación entre dos cajas
-    function createRelation(box1, box2) {
+    // Relaciones con tipos
+    function createRelation(box1, box2, type) {
       let line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      line.setAttribute("stroke", "black");
+      line.setAttribute("stroke", "#444");
       line.setAttribute("stroke-width", "2");
+
+      if (type === "herencia") {
+        line.setAttribute("marker-end", "url(#arrow)");
+      } else if (type === "composicion") {
+        line.setAttribute("marker-start", "url(#diamond)");
+      }
 
       svg.appendChild(line);
       relations.push({ line, box1, box2 });
       updateLines();
     }
 
-    function startRelation() {
+    function startRelation(type) {
       relationMode = true;
       firstBox = null;
+      relationType = type;
     }
 
-    // Actualizar posiciones de líneas
+    // Actualizar posiciones
     function updateLines() {
       relations.forEach(rel => {
         let r1 = rel.box1.getBoundingClientRect();
@@ -174,7 +244,7 @@
       });
     }
 
-    // Drag & Drop
+    // Drag & Drop con animación suave
     function makeDraggable(element) {
       let offsetX, offsetY, isDown = false;
 
@@ -197,6 +267,32 @@
         element.style.top = e.clientY - offsetY + "px";
         updateLines();
       });
+    }
+
+    // Funciones menú
+    function deleteBox(btn) {
+      let box = btn.closest(".class-box");
+      canvas.removeChild(box);
+      relations = relations.filter(r => r.box1 !== box && r.box2 !== box);
+      updateLines();
+    }
+
+    function duplicateBox(btn) {
+      let box = btn.closest(".class-box");
+      let clone = box.cloneNode(true);
+      clone.style.top = parseInt(box.style.top) + 30 + "px";
+      clone.style.left = parseInt(box.style.left) + 30 + "px";
+      canvas.appendChild(clone);
+      makeDraggable(clone);
+    }
+
+    function changeColor(btn) {
+      let box = btn.closest(".class-box");
+      let colors = ["#fffbe7", "#e7f7ff", "#e7ffe7", "#f7e7ff"];
+      let current = box.style.background;
+      let index = colors.indexOf(current);
+      let next = colors[(index + 1) % colors.length];
+      box.style.background = next || colors[0];
     }
   </script>
 </body>
